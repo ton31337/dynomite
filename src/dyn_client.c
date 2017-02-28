@@ -549,7 +549,7 @@ local_req_forward(struct context *ctx, struct conn *c_conn, struct msg *req,
            (c_conn->type == CONN_DNODE_PEER_CLIENT));
 
     s_conn = get_datastore_conn(ctx, c_conn->owner);
-    log_debug(LOG_VERB, "c_conn %p got server conn %p", c_conn, s_conn);
+    log_debug(LOG_VERB, "%M got server conn %M", c_conn, s_conn);
     if (s_conn == NULL) {
         *dyn_error_code = STORAGE_CONNECTION_REFUSE;
         return errno;

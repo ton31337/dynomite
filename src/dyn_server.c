@@ -37,13 +37,13 @@ server_ref(struct conn *conn, void *owner)
 
     ASSERT(conn->type == CONN_SERVER);
     ASSERT(conn->owner == NULL);
-    ASSERT(server->conn == NULL);
+    //ASSERT(server->conn == NULL);
 
 	conn->family = server->endpoint.family;
 	conn->addrlen = server->endpoint.addrlen;
 	conn->addr = server->endpoint.addr;
     string_duplicate(&conn->pname, &server->endpoint.pname);
-    server->conn = conn;
+    //server->conn = conn;
 
 	conn->owner = owner;
 
@@ -63,8 +63,8 @@ server_unref(struct conn *conn)
 	server = conn->owner;
 	conn->owner = NULL;
 
-    ASSERT(server->conn);
-    server->conn = NULL;
+    //ASSERT(server->conn);
+    //server->conn = NULL;
 
 	log_debug(LOG_VVERB, "unref conn %p owner %p from '%.*s'", conn, server,
 			server->endpoint.pname.len, server->endpoint.pname.data);
@@ -119,16 +119,22 @@ server_deinit(struct datastore **pdatastore)
 {
     if (!pdatastore || !*pdatastore)
         return;
-    ASSERT((*pdatastore)->conn == NULL);
+    //ASSERT((*pdatastore)->conn == NULL);
 }
 
 static struct conn *
 server_conn(struct datastore *datastore)
 {
-    if (!datastore->conn) {
+    /*if (!datastore->conn) {
         return conn_get(datastore, false);
     }
-    return datastore->conn;
+    return datastore->conn;*/
+    static uint32_t i = 0;
+    struct conn **pconn = array_get(&datastore->connections, i);
+    struct conn *conn = *pconn;
+    //log_warn("Using connection %u %M", i, conn);
+    i = (i + 1) % 3;
+    return conn;
 }
 
 static rstatus_t
@@ -136,21 +142,27 @@ datastore_preconnect(struct datastore *datastore)
 {
 	rstatus_t status;
 	struct server_pool *pool;
-	struct conn *conn;
 
 	pool = datastore->owner;
+    int i = 0;
+    for (;i < 3 ; i++) {
+	    struct connection **pconn = array_push(&datastore->connections);
+        *pconn = NULL;
+	    struct conn *conn = conn_get(datastore, false);
 
-	conn = server_conn(datastore);
-	if (conn == NULL) {
-		return DN_ENOMEM;
-	}
+        if (conn == NULL) {
+            return DN_ENOMEM;
+        }
 
-	status = conn_connect(pool->ctx, conn);
-	if (status != DN_OK) {
-		log_warn("connect to datastore '%.*s' failed, ignored: %s",
-				datastore->endpoint.pname.len, datastore->endpoint.pname.data, strerror(errno));
-		server_close(pool->ctx, conn);
-	}
+        status = conn_connect(pool->ctx, conn);
+        if (status != DN_OK) {
+            log_warn("connect to datastore '%.*s' failed, ignored: %s",
+                    datastore->endpoint.pname.len, datastore->endpoint.pname.data, strerror(errno));
+            server_close(pool->ctx, conn);
+        }
+        log_warn("New connection %M to datastore", conn);
+        *pconn = conn;
+    }
 
 	return DN_OK;
 }
@@ -159,11 +171,13 @@ static rstatus_t
 datastore_disconnect(struct datastore *datastore)
 {
 	struct server_pool *pool = datastore->owner;
-
-    struct conn *conn = datastore->conn;
-    if (conn) {
-		conn_close(pool->ctx, conn);
-	}
+    uint32_t i = 0;
+    for (;i < 3 ; i++) {
+        struct conn **pconn = array_get(&datastore->connections, i);
+        if (*pconn) {
+		    conn_close(pool->ctx, *pconn);
+	    }
+    }
 
 	return DN_OK;
 }
