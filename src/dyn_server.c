@@ -133,7 +133,7 @@ server_conn(struct datastore *datastore)
     struct conn **pconn = array_get(&datastore->connections, i);
     struct conn *conn = *pconn;
     //log_warn("Using connection %u %M", i, conn);
-    i = (i + 1) % 3;
+    i = (i + 1) % STORAGE_CONNECTIONS;
     return conn;
 }
 
@@ -145,7 +145,7 @@ datastore_preconnect(struct datastore *datastore)
 
 	pool = datastore->owner;
     int i = 0;
-    for (;i < 3 ; i++) {
+    for (;i < STORAGE_CONNECTIONS; i++) {
 	    struct connection **pconn = array_push(&datastore->connections);
         *pconn = NULL;
 	    struct conn *conn = conn_get(datastore, false);
@@ -172,7 +172,7 @@ datastore_disconnect(struct datastore *datastore)
 {
 	struct server_pool *pool = datastore->owner;
     uint32_t i = 0;
-    for (;i < 3 ; i++) {
+    for (;i < STORAGE_CONNECTIONS ; i++) {
         struct conn **pconn = array_get(&datastore->connections, i);
         if (*pconn) {
 		    conn_close(pool->ctx, *pconn);
@@ -548,7 +548,7 @@ dc_init(struct datacenter *dc)
 	string_init(dc->name);
     dc->preselected_rack_for_replication = NULL;
 
-	status = array_init(&dc->racks, 3, sizeof(struct rack));
+	status = array_init(&dc->racks, STORAGE_CONNECTIONS, sizeof(struct rack));
 
 	return status;
 }

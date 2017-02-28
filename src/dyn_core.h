@@ -70,6 +70,7 @@
 #define DN_ENOMEM   -3
 #define DN_ENO_IMPL -4
 
+#define STORAGE_CONNECTIONS 3
 
 typedef int rstatus_t; /* return type */
 typedef int err_t;     /* error type */
