@@ -422,6 +422,7 @@ static rstatus_t
 core_recv(struct context *ctx, struct conn *conn)
 {
 	rstatus_t status;
+    conn->last_recv_time = dn_msec_now();
 
 	status = conn_recv(ctx, conn);
 	if (status != DN_OK) {
@@ -436,7 +437,7 @@ static rstatus_t
 core_send(struct context *ctx, struct conn *conn)
 {
 	rstatus_t status;
-
+    conn->last_send_time = dn_msec_now();
 	status = conn_send(ctx, conn);
 	if (status != DN_OK) {
 		log_info("send on %s %d failed: %s", conn_get_type_string(conn),
@@ -714,10 +715,12 @@ core_loop(struct context *ctx)
     struct server_pool *sp = &ctx->pool;
     struct conn *conn, *nconn;
     TAILQ_FOREACH_SAFE(conn, &sp->ready_conn_q, ready_tqe, nconn) {
+        uint32_t prev = conn->omsg_count;
 		rstatus_t status = core_send(ctx, conn);
         if (status == DN_OK) {
             log_debug(LOG_VVERB, "Flushing writes on %s %d", conn_get_type_string(conn), conn->sd);
-            conn_event_del_out(conn);
+            if (conn->imsg_count == 0)
+                conn_event_del_out(conn);
         } else {
             TAILQ_REMOVE(&sp->ready_conn_q, conn, ready_tqe);
         }

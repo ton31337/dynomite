@@ -114,6 +114,8 @@ struct conn {
     struct conn_ops    *ops;
     size_t             recv_bytes;    /* received (read) bytes */
     size_t             send_bytes;    /* sent (written) bytes */
+    msec_t             last_send_time;
+    msec_t             last_recv_time;
 
     uint32_t           events;        /* connection io events */
     err_t              err;           /* connection errno */

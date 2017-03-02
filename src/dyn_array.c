@@ -65,6 +65,7 @@ array_init(struct array *a, uint32_t n, size_t size)
     if (a->elem == NULL) {
         return DN_ENOMEM;
     }
+    memset (a->elem, 0, n*size);
 
     a->nelem = 0;
     a->size = size;

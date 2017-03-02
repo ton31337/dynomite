@@ -148,6 +148,10 @@ dnode_client_close(struct context *ctx, struct conn *conn)
     ASSERT(conn->type == CONN_DNODE_PEER_CLIENT);
 
     dnode_client_close_stats(ctx, conn->owner, conn->err, conn->eof);
+    msec_t now = dn_msec_now();
+    log_warn("close %M now %lu, last received:%lu (diff %lu) last sent: %lu (diff %lu)", conn,
+             now, conn->last_recv_time, now - conn->last_recv_time,
+             conn->last_send_time, now - conn->last_send_time);
 
     if (conn->sd < 0) {
         conn_unref(conn);
